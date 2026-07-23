@@ -8,7 +8,7 @@ This repo includes a small browser-based calculator in `index.html`, with styles
 
 ### Run it locally
 
-You can open the app directly in a browser or serve it with a local static server.
+You can open the app directly in a browser or start a local static server for a browser URL.
 
 #### Option 1: Open the HTML file
 
