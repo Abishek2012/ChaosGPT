@@ -1,88 +1,70 @@
-const display = document.querySelector('#display');
-const historyLine = document.querySelector('#history');
-const keys = document.querySelectorAll('.key');
-
-let expression = '';
-let justCalculated = false;
-
-const operators = new Set(['+', '-', '*', '/', '%']);
-const visibleOperators = { '*': '×', '/': '÷', '-': '−' };
-
-function prettify(value) {
-  return value.replace(/[*/-]/g, (operator) => visibleOperators[operator] || operator);
-}
-
-function updateDisplay(message = '') {
-  display.textContent = expression ? prettify(expression) : '0';
-  historyLine.textContent = message || (expression ? 'Typing…' : 'Ready');
-}
-
-function appendValue(value) {
-  if (justCalculated && !operators.has(value)) {
-    expression = '';
+const scenarios = {
+  blackFriday: {
+    name: 'Black Friday traffic readiness',
+    intent: 'Protect checkout, recommendations, payments, and Redis-backed sessions during a 12x traffic spike.',
+    actions: [
+      'Scale synthetic load from 1x to 12x over 15 minutes',
+      'Inject 220ms p95 latency into checkout and catalog services',
+      'Kill 25% of checkout pods after cart traffic peaks',
+      'Restart one worker node in the recommendation pool',
+      'Add 3% packet loss between API gateway and Redis',
+      'Throttle PostgreSQL writes for order creation for 4 minutes'
+    ],
+    fixes: ['Tune HPA target CPU to 55%', 'Add Redis circuit breaker', 'Increase checkout retry budget with jitter']
+  },
+  modelDrift: {
+    name: 'Model drift recovery',
+    intent: 'Verify that an inference service detects drift, falls back safely, and preserves SLOs under degraded feature quality.',
+    actions: [
+      'Replay skewed feature payloads into the inference API',
+      'Inject 400ms latency into the feature-store dependency',
+      'Kill one model-serving pod during canary promotion',
+      'Force stale cache reads for 6 minutes',
+      'Trigger alert routing for accuracy and p99 latency budgets'
+    ],
+    fixes: ['Add drift guardrail threshold', 'Promote shadow-model rollback policy', 'Cache high-value features locally']
+  },
+  regionalOutage: {
+    name: 'Regional cloud outage',
+    intent: 'Exercise multi-cloud failover across Kubernetes clusters and managed data services.',
+    actions: [
+      'Deny egress to one cloud region for customer APIs',
+      'Delete a non-critical ConfigMap to test GitOps reconciliation',
+      'Fill disk on one logging node to 90%',
+      'Inject DNS failures for 120 seconds',
+      'Validate Terraform drift detection after recovery'
+    ],
+    fixes: ['Add regional failover runbook', 'Harden DNS retry strategy', 'Add log-volume autoscaling policy']
   }
+};
 
-  justCalculated = false;
-  const last = expression.at(-1);
+const failureModes = [
+  'Kill Pods', 'Kill Nodes', 'Delete PVCs', 'Delete ConfigMaps', 'Network Latency', 'Packet Loss',
+  'CPU Stress', 'Memory Stress', 'Disk Fill', 'DNS Failure', 'API Failure', 'Kafka Failure',
+  'Redis Failure', 'PostgreSQL Failure', 'Feature Store Latency', 'Model Drift', 'Canary Rollback', 'Pipeline Retry'
+];
 
-  if (value === '.' && expression.split(/[+\-*/%]/).at(-1).includes('.')) return;
-  if (operators.has(value) && (!expression || operators.has(last))) {
-    expression = expression.slice(0, -1) + value;
-  } else {
-    expression += value;
-  }
+const planOutput = document.querySelector('#plan-output');
+const scenarioSelect = document.querySelector('#scenario-select');
+const generatePlanButton = document.querySelector('#generate-plan');
+const failureGrid = document.querySelector('#failure-grid');
 
-  updateDisplay();
+function renderFailureCatalog() {
+  failureGrid.innerHTML = failureModes
+    .map((mode) => `<span class="failure-pill">${mode}</span>`)
+    .join('');
 }
 
-function calculate() {
-  if (!expression || operators.has(expression.at(-1))) return;
+function renderPlan(key = 'blackFriday') {
+  const scenario = scenarios[key];
+  const actions = scenario.actions.map((action) => `  - ${action}`).join('\n');
+  const fixes = scenario.fixes.map((fix) => `  - ${fix}`).join('\n');
 
-  try {
-    const sanitized = expression.replace(/%/g, '/100');
-    const total = Function(`"use strict"; return (${sanitized})`)();
-
-    if (!Number.isFinite(total)) throw new Error('Invalid calculation');
-
-    const rounded = Number.parseFloat(total.toFixed(10)).toString();
-    historyLine.textContent = `${prettify(expression)} =`;
-    expression = rounded;
-    display.textContent = rounded;
-    justCalculated = true;
-  } catch {
-    historyLine.textContent = 'Check the expression and try again';
-    display.textContent = 'Error';
-    expression = '';
-    justCalculated = true;
-  }
+  planOutput.textContent = `scenario: ${scenario.name}\nintent: ${scenario.intent}\nblast_radius:\n  namespace: production-canary\n  max_customer_impact: 5%\nactions:\n${actions}\nobservability:\n  - Prometheus SLO burn rate\n  - Loki error burst detection\n  - Tempo trace waterfall\n  - OpenTelemetry dependency map\nai_outputs:\n  rca: generated after experiment\n  timeline: generated from events and spans\n  suggested_fixes:\n${fixes}\n  github_pr: terraform-and-k8s-remediation`;
 }
 
-function clearCalculator() {
-  expression = '';
-  justCalculated = false;
-  updateDisplay();
-}
+generatePlanButton.addEventListener('click', () => renderPlan(scenarioSelect.value));
+scenarioSelect.addEventListener('change', () => renderPlan(scenarioSelect.value));
 
-function backspace() {
-  expression = expression.slice(0, -1);
-  updateDisplay();
-}
-
-keys.forEach((key) => {
-  key.addEventListener('click', () => {
-    const { value, action } = key.dataset;
-    if (action === 'clear') clearCalculator();
-    if (action === 'backspace') backspace();
-    if (action === 'calculate') calculate();
-    if (value) appendValue(value);
-  });
-});
-
-document.addEventListener('keydown', (event) => {
-  if (/^[0-9.+\-*/%]$/.test(event.key)) appendValue(event.key);
-  if (event.key === 'Enter' || event.key === '=') calculate();
-  if (event.key === 'Backspace') backspace();
-  if (event.key === 'Escape') clearCalculator();
-});
-
-updateDisplay();
+renderFailureCatalog();
+renderPlan();
