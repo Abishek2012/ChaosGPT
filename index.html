@@ -3,53 +3,136 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interactive Calculator</title>
+  <title>ChaosGPT | Autonomous Chaos Engineering Platform</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="calculator-shell" aria-labelledby="app-title">
-    <section class="hero-card">
-      <p class="eyebrow">JavaScript Mini Project</p>
-      <h1 id="app-title">Interactive Calculator</h1>
-      <p class="subtitle">A polished calculator with keyboard support, history, and responsive glassmorphism styling.</p>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="ChaosGPT home">
+      <span class="brand-mark">CG</span>
+      <span>ChaosGPT</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#platform">Platform</a>
+      <a href="#experiments">Experiments</a>
+      <a href="#devops">DevOps</a>
+      <a href="#mlops">MLOps</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero section-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Chaos Monkey + Observability + AI Agents</p>
+        <h1>Autonomous resilience testing for cloud-native AI systems.</h1>
+        <p class="subtitle">
+          ChaosGPT turns business events such as “simulate Black Friday traffic” into safe, observable chaos experiments across Kubernetes, cloud infrastructure, data services, and ML pipelines.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#scenario-lab">Run demo scenario</a>
+          <a class="button secondary" href="#architecture">View architecture</a>
+        </div>
+        <dl class="stats" aria-label="Platform highlights">
+          <div><dt>18</dt><dd>Failure modes</dd></div>
+          <div><dt>3</dt><dd>Cloud providers</dd></div>
+          <div><dt>1</dt><dd>AI RCA agent</dd></div>
+        </dl>
+      </div>
+
+      <aside class="command-center" aria-label="Live chaos command center">
+        <div class="terminal-bar">
+          <span></span><span></span><span></span>
+          <strong>autonomous-plan.yaml</strong>
+        </div>
+        <pre id="plan-output" aria-live="polite"></pre>
+      </aside>
     </section>
 
-    <section class="calculator" aria-label="Calculator">
-      <div class="display" aria-live="polite">
-        <div class="history" id="history">Ready</div>
-        <output class="result" id="display">0</output>
+    <section class="section" id="platform">
+      <p class="eyebrow">Unified control plane</p>
+      <h2>DevOps guardrails meet MLOps reliability.</h2>
+      <div class="cards three">
+        <article class="card">
+          <h3>Kubernetes & Cloud Chaos</h3>
+          <p>Orchestrates Litmus and Chaos Mesh experiments for pods, nodes, PVCs, ConfigMaps, network faults, CPU, memory, DNS, and cloud dependencies.</p>
+        </article>
+        <article class="card">
+          <h3>Observability Correlation</h3>
+          <p>Collects Prometheus metrics, Grafana dashboards, Loki logs, Tempo traces, and OpenTelemetry spans to score user impact in real time.</p>
+        </article>
+        <article class="card">
+          <h3>AI Remediation PRs</h3>
+          <p>Generates timelines, root-cause analysis, retry/circuit-breaker recommendations, and GitHub pull requests for infrastructure fixes.</p>
+        </article>
       </div>
+    </section>
 
-      <div class="keypad">
-        <button class="key utility" data-action="clear">AC</button>
-        <button class="key utility" data-action="backspace">⌫</button>
-        <button class="key operator" data-value="%">%</button>
-        <button class="key operator" data-value="/">÷</button>
-
-        <button class="key" data-value="7">7</button>
-        <button class="key" data-value="8">8</button>
-        <button class="key" data-value="9">9</button>
-        <button class="key operator" data-value="*">×</button>
-
-        <button class="key" data-value="4">4</button>
-        <button class="key" data-value="5">5</button>
-        <button class="key" data-value="6">6</button>
-        <button class="key operator" data-value="-">−</button>
-
-        <button class="key" data-value="1">1</button>
-        <button class="key" data-value="2">2</button>
-        <button class="key" data-value="3">3</button>
-        <button class="key operator" data-value="+">+</button>
-
-        <button class="key wide" data-value="0">0</button>
-        <button class="key" data-value=".">.</button>
-        <button class="key equals" data-action="calculate">=</button>
+    <section class="section split" id="scenario-lab">
+      <div>
+        <p class="eyebrow">Scenario lab</p>
+        <h2>Describe intent. Let the agent compose the blast radius.</h2>
+        <p>
+          Select a plain-English incident drill and ChaosGPT will combine traffic generation, service faults, infrastructure disruptions, and data-system failures into an auditable experiment plan.
+        </p>
       </div>
+      <div class="scenario-panel">
+        <label for="scenario-select">Scenario</label>
+        <select id="scenario-select">
+          <option value="blackFriday">Simulate Black Friday traffic</option>
+          <option value="modelDrift">Validate model-drift recovery</option>
+          <option value="regionalOutage">Exercise regional cloud outage</option>
+        </select>
+        <button class="button primary full" id="generate-plan">Generate AI plan</button>
+      </div>
+    </section>
+
+    <section class="section" id="experiments">
+      <p class="eyebrow">Failure catalog</p>
+      <h2>Purpose-built experiments for platform, app, data, and ML teams.</h2>
+      <div class="failure-grid" id="failure-grid"></div>
+    </section>
+
+    <section class="section split" id="architecture">
+      <div>
+        <p class="eyebrow">Reference stack</p>
+        <h2>Built from production DevOps and MLOps primitives.</h2>
+        <ul class="stack-list">
+          <li>Go orchestrator for Kubernetes, Docker, AWS, Azure, and GCP adapters.</li>
+          <li>Python FastAPI agent service for planning, evaluation, and RCA generation.</li>
+          <li>PostgreSQL for experiment state and Redis for queueing and run coordination.</li>
+          <li>ArgoCD and Terraform for GitOps delivery, policy gates, and environment provisioning.</li>
+        </ul>
+      </div>
+      <div class="architecture-map" aria-label="Architecture flow">
+        <span>React UI</span>
+        <span>FastAPI AI Agent</span>
+        <span>Go Chaos Orchestrator</span>
+        <span>Litmus / Chaos Mesh</span>
+        <span>OpenTelemetry</span>
+        <span>GitHub PR Bot</span>
+      </div>
+    </section>
+
+    <section class="section cards two" id="devops">
+      <article class="card accent">
+        <p class="eyebrow">DevOps automation</p>
+        <h2>From experiment to merged fix.</h2>
+        <p>Each run is wrapped in blast-radius policy, SLO checks, approval gates, rollback hooks, and a GitOps remediation proposal.</p>
+      </article>
+      <article class="card accent" id="mlops">
+        <p class="eyebrow">MLOps reliability</p>
+        <h2>Stress the model and the platform.</h2>
+        <p>Validate feature-store latency, inference saturation, drift alarms, canary rollout health, and pipeline recovery alongside infrastructure faults.</p>
+      </article>
     </section>
   </main>
+
+  <footer>
+    <p>ChaosGPT reference project for autonomous chaos engineering, DevOps, and MLOps.</p>
+  </footer>
 
   <script src="script.js"></script>
 </body>
