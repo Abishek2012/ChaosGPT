@@ -1,0 +1,9 @@
+# Apply only to a disposable chaos environment. The selector deliberately cannot target production.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata: {name: aegisml-one-pod-kill, namespace: chaos}
+spec:
+  action: pod-kill
+  mode: one
+  duration: 30s
+  selector: {namespaces: [ml-platform], labelSelectors: {app.kubernetes.io/name: aegisml-inference, aegisml.io/chaos-approved: "true"}}

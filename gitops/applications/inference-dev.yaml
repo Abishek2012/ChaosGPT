@@ -1,0 +1,8 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: {name: aegisml-inference-dev, namespace: argocd}
+spec:
+  project: default
+  source: {repoURL: https://github.com/REPLACE_ME/aegisml.git, targetRevision: main, path: helm/inference-service, helm: {valueFiles: [../../gitops/environments/dev/values.yaml]}}
+  destination: {server: https://kubernetes.default.svc, namespace: ml-platform}
+  syncPolicy: {automated: {prune: true, selfHeal: true}, syncOptions: [CreateNamespace=true]}

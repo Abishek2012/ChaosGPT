@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: ml-platform}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: monitoring}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: chaos}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: finops}

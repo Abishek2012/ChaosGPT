@@ -1,0 +1,10 @@
+image:
+  repository: ghcr.io/example/aegisml-inference
+  tag: sha-REPLACE_AT_RELEASE
+replicaCount: 2
+serviceAccount: aegisml-inference
+resources:
+  requests: {cpu: 250m, memory: 512Mi}
+  limits: {cpu: "1", memory: 1Gi}
+autoscaling: {minReplicas: 2, maxReplicas: 10, cpu: 65, memory: 75}
+ingress: {enabled: false, className: nginx, host: aegisml.local}
