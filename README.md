@@ -1,95 +1,68 @@
-# ChaosGPT
+# AegisML — FinOps-Aware ML Inference & Reliability Platform
 
-ChaosGPT is an enterprise-grade, local-first AI-powered Chaos Engineering platform for Kubernetes, DevOps, MLOps, observability, AI agents, and GitOps.
+AegisML is a portable, GitOps-operated platform reference for a real-time transaction-risk inference workload. It intentionally couples the ML lifecycle with the operational questions that matter in production: **is the model safe to promote, is the service meeting its SLO, and what does each prediction cost?**
 
-This repository is organized as a production monorepo. Milestone 1 delivers a runnable control-plane foundation instead of a throwaway demo: typed domain models, a FastAPI API, a policy-first planner, Kubernetes discovery against a real cluster, local open-source dependencies, a Go orchestrator starter, CI, and documentation.
+> This repository contains a runnable local inference service and deployable Kubernetes/GitOps assets. Cost is an **estimate derived from configured unit rates and measured Prometheus/OpenCost inputs**, never cloud-billing data. Chaos manifests target only the `chaos` namespace and require a deliberate apply.
 
-## Milestone Strategy
+## Architecture
 
-The platform is built in independently runnable milestones. This commit completes **Milestone 1: Control Plane Foundation**.
-
-Milestone 1 includes:
-
-- FastAPI control-plane service with health, planning, and live Kubernetes inventory endpoints.
-- Clean domain/application/infrastructure separation for experiment plans and planner policy.
-- Real Kubernetes discovery through the Kubernetes API; no mocked cluster inventory is returned.
-- Local Docker Compose dependencies for PostgreSQL, Redis, NATS, Qdrant, Prometheus, and Grafana.
-- Kind bootstrap script for a local Kubernetes cluster.
-- Go orchestrator starter for experiment execution payloads.
-- GitHub Actions for Python tests/lint, Go tests, and Docker image build.
-- Architecture and deployment documentation.
-
-## Repository Layout
-
-```text
-backend/                  FastAPI control plane, domain logic, infrastructure adapters, tests
-cmd/chaos-orchestrator/   Go orchestration starter
-frontend/                 React + TypeScript + Vite workspace placeholder for the console
-infra/docker/             Local open-source services via Docker Compose
-infra/terraform/          Terraform environment scaffold
-deployments/kubernetes/   Kubernetes and Litmus manifests
-docs/                     Architecture, deployment, and remediation docs
-scripts/                  Local developer automation
-.github/workflows/        CI pipeline
+```mermaid
+flowchart LR
+  Dev[ML engineer] --> CI[GitHub Actions: test, validate, scan]
+  CI --> MF[MLflow: experiments & registry]
+  CI --> Reg[OCI registry: immutable SHA image]
+  CI --> GitOps[GitOps environment values]
+  GitOps --> Argo[Argo CD]
+  Argo --> K8s[Kubernetes: inference API]
+  K8s --> Obs[Prometheus/Grafana/OTel/Loki]
+  Obs --> Cost[OpenCost + AegisML cost model]
+  Obs --> Chaos[Chaos Mesh: opt-in experiments]
+  Cost --> Rec[FinOps recommendations]
 ```
 
-## Run Milestone 1 Locally
+## Quick start
 
-### 1. Install Python dependencies
+Prerequisites: Python 3.11+, Docker, `kind`, `kubectl`, Helm, and (for the full observability demo) an existing Prometheus/OpenCost installation. The local API has no required external service.
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -r backend/requirements-dev.txt
+make setup             # virtualenv and pinned application dependencies
+make train             # train deterministic synthetic fraud model + metadata
+make validate-model    # promotion gate
+make test              # unit and API tests
+make run               # http://127.0.0.1:8080/docs
+make smoke-test        # exercise health, ready, prediction and cost endpoints
+make build IMAGE_TAG=$(git rev-parse --short HEAD)
+make setup-cluster     # creates kind cluster and namespaces
+make deploy IMAGE_TAG=$(git rev-parse --short HEAD) # Helm (local substitute for Argo reconciliation)
 ```
 
-### 2. Start local platform dependencies
+`make deploy` is a developer-only local convenience. The CI workflow edits GitOps values; it never applies workload manifests to a cluster. Argo CD owns deployed state in an environment.
 
-```bash
-docker compose -f infra/docker/docker-compose.yml up -d
-```
+## Demo walkthrough
 
-### 3. Start a local Kubernetes cluster
+1. **Model promotion:** run `make train && make validate-model`. The gate checks artifact integrity, mandatory metadata, ROC-AUC, and measured prediction latency before marking the build eligible for `development`.
+2. **Normal deployment:** publish a SHA-tagged image through CI, review its GitOps values change, and let Argo CD reconcile `gitops/applications/inference-dev.yaml`.
+3. **Traffic/autoscaling:** deploy Prometheus Adapter/KEDA as documented, then run `scripts/generate-traffic.sh`; HPA uses CPU plus request-rate external metric. KEDA is supplied as an optional HTTP add-on when the metric adapter exists.
+4. **FinOps:** query `/cost` locally for an explicit estimate or use the Grafana dashboard against OpenCost. Run `make finops` to produce data-labelled recommendations.
+5. **Controlled chaos:** only in a disposable cluster, run `make chaos`. Keep traffic running and compare the Prometheus/Grafana SLO, p95, replicas, and OpenCost panels before/during/after. The report template records actual measured values; it contains no fabricated results.
 
-```bash
-scripts/kind-up.sh
-```
+## API
 
-### 4. Run the API
+| Endpoint | Purpose |
+|---|---|
+| `GET /health`, `GET /ready` | process and model readiness |
+| `GET /metrics` | Prometheus metrics |
+| `POST /predict` | idempotent transaction-risk inference |
+| `GET /model`, `GET /version` | active model provenance |
+| `GET /cost` | transparent estimated cost-per-inference |
+| `GET /reliability` | in-process SLO/error-budget snapshot |
 
-```bash
-PYTHONPATH=backend uvicorn app.main:app --reload
-```
+See [deployment](docs/deployment.md), [MLOps](docs/mlops.md), [FinOps](docs/finops.md), [chaos engineering](docs/chaos-engineering.md), and [production readiness](docs/production-readiness.md).
 
-### 5. Create a production-guarded experiment plan
+## Local vs. production
 
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/experiments/plans \
-  -H "Content-Type: application/json" \
-  -d '{"intent":"Simulate Black Friday","namespace":"production-canary","max_customer_impact_percent":5}'
-```
+The service uses a local joblib artifact by default. In a cluster, MLflow artifacts may be backed by MinIO/S3 and the tracking server by PostgreSQL. OpenCost supplies cluster allocation data; the API's local cost calculator is a documented substitute for laptop demos. Cloud mappings for EKS/AKS/GKE are in [architecture](docs/architecture.md).
 
-### 6. Discover the local Kubernetes cluster
+## Safety and scope
 
-```bash
-curl http://127.0.0.1:8000/api/v1/clusters/local/inventory
-```
-
-The inventory endpoint talks to the Kubernetes API directly and fails loudly if kubeconfig or the Kubernetes client is unavailable.
-
-## Current Capabilities
-
-- Cluster discovery: namespaces, deployments, pods, nodes, PVCs, services, and ingresses.
-- Chaos planning for high-risk business scenarios with mandatory blast-radius controls.
-- Failure-mode taxonomy covering CPU, memory, disk, pods, nodes, DNS, packet loss, latency, bandwidth, Redis, Kafka, PostgreSQL, APIs, PVCs, ConfigMaps, and Secrets.
-- Local OSS dependencies: PostgreSQL, Redis, NATS, Qdrant, Prometheus, Grafana, Kind, Litmus, and Chaos Mesh-ready Kubernetes manifests.
-- JWT helper functions for signed access tokens and role claims.
-
-## Next Milestones
-
-1. Persist experiments, approvals, schedules, audit logs, and reports in PostgreSQL with SQLAlchemy and Alembic.
-2. Add LangGraph planner integration with Ollama and OpenAI-compatible APIs.
-3. Implement Chaos Mesh and Litmus executors with approval gates and dry-run previews.
-4. Add OpenTelemetry instrumentation and RCA ingestion from Prometheus, Loki, Tempo, and Kubernetes events.
-5. Build the React/TypeScript/Tailwind operator console.
-6. Add GitHub remediation PR generation for HPA, resources, retries, circuit breakers, and GitOps manifests.
+Never apply chaos manifests to production. Use separate service accounts, an explicitly selected target namespace, approval records, and a bounded selector. Image tags are immutable; `latest` is denied by policy. See [security](docs/security.md).

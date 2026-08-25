@@ -1,0 +1,31 @@
+name: build-validate-gitops
+on: {pull_request: {}, push: {branches: [main]}}
+permissions: {contents: write, packages: write, id-token: write}
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with: {python-version: '3.11'}
+    - run: pip install -r services/inference-api/requirements.txt -r services/inference-api/requirements-dev.txt
+    - run: make train lint test validate-model
+    - uses: anchore/sbom-action@v0
+      with: {path: services/inference-api, artifact-name: aegisml-sbom}
+  image-and-gitops:
+    needs: validate
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: docker/login-action@v3
+      with: {registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}'}
+    - uses: docker/build-push-action@v6
+      with: {context: ., file: services/inference-api/Dockerfile, push: true, tags: ghcr.io/${{ github.repository_owner }}/aegisml-inference:sha-${{ github.sha }}}
+    - uses: aquasecurity/trivy-action@0.28.0
+      with: {image-ref: ghcr.io/${{ github.repository_owner }}/aegisml-inference:sha-${{ github.sha }}, exit-code: '1', severity: HIGH,CRITICAL}
+    - name: Sign immutable image
+      uses: sigstore/cosign-installer@v3
+    - run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/aegisml-inference:sha-${{ github.sha }}
+    - name: Update desired state only; Argo CD reconciles it
+      run: sed -i "s|tag: .*|tag: sha-${GITHUB_SHA}|" gitops/environments/dev/values.yaml && git diff --exit-code || (git config user.name aegisml-ci && git config user.email ci@users.noreply.github.com && git add gitops/environments/dev/values.yaml && git commit -m "gitops: promote ${GITHUB_SHA}" && git push)

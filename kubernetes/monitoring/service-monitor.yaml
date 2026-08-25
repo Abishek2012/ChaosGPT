@@ -1,0 +1,7 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata: {name: aegisml-inference, namespace: monitoring}
+spec:
+  namespaceSelector: {matchNames: [ml-platform]}
+  selector: {matchLabels: {app.kubernetes.io/name: aegisml-inference}}
+  endpoints: [{port: http, path: /metrics, interval: 15s}]

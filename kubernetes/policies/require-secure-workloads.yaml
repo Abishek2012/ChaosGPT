@@ -1,0 +1,17 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata: {name: require-secure-workloads}
+spec:
+  validationFailureAction: Audit
+  rules:
+  - name: no-latest-and-non-root
+    match: {any: [{resources: {kinds: [Pod]}}]}
+    validate:
+      message: "Images must be immutable and containers must run non-root."
+      pattern:
+        spec:
+          securityContext: {runAsNonRoot: true}
+          containers:
+          - image: "!*:latest"
+            securityContext: {allowPrivilegeEscalation: false}
+            resources: {requests: {cpu: "?*", memory: "?*"}, limits: {cpu: "?*", memory: "?*"}}
